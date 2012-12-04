@@ -3,6 +3,7 @@ Rewritten with lua + Love instead of python + pygame
 
 ##Running
 download love2d runtime
+https://love2d.org/wiki/Main_Page
 
 love pirates.love
 
