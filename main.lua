@@ -9,6 +9,10 @@ local message
 --6: Planet
 --
 
+-- OVERALL TODO:
+-- create a uniform objects scanner that checks bounds, resets velocity and momentum and removes marked data
+-- revise collision detection function to make better sense (need to find a better way to do choose which event has happened)
+
 -- World Physics Area
 worldPhysics = {}
 worldPhysics.meter = 10 -- 1m is 10 px
@@ -59,7 +63,7 @@ function love.load()
 
     -- planets
     objects.planets = {}
-    
+    --TODO: generate this as a proper function that makes planets with specified mass, size and position
     planet1 = {}
     planet1.body = love.physics.newBody(world,100,100, "static")
     planet1.shape = love.physics.newCircleShape(50)
@@ -74,7 +78,37 @@ function love.load()
 
     table.insert(objects.planets, planet1)
     table.insert(objects.planets, planet2)
+   
+    -- asteroids
+    objects.asteroids = {}
+    --TODO: generate this as a proper function that takes a centre point and makes random shapes, and places them in clear space
+    asteroid1 = {}
+    asteroid1.radius = 5
+    asteroid1.body = love.physics.newBody(world, asteroid1.centreX, asteroid1.centreY, "dynamic")
+    asteroid1.shape = love.physics.newPolygonShape(
+        200,200,225,175,225,225
+    )
+    asteroid1.fixture = love.physics.newFixture(asteroid1.body, asteroid1.shape, 1)
+    asteroid1.fixture:setCategory(5)
+
+    --TODO: generate this as a proper function that takes a centre point and makes random shapes, and places them in clear space
+    asteroid2 = {}
+    asteroid2.body = love.physics.newBody(world, asteroid2.centreX, asteroid2.centreY, "dynamic")
+    asteroid2.shape = love.physics.newPolygonShape(
+        200,300,225,275,225,325
+    )
+    asteroid2.fixture = love.physics.newFixture(asteroid2.body, asteroid2.shape, 1)
+    asteroid2.fixture:setCategory(5)
     
+    table.insert(objects.asteroids, asteroid2)
+    table.insert(objects.asteroids, asteroid1)
+
+    -- clean up spare references -- REMOVE THIS WHEN PROPER FUNCTION IS MADE
+    asteroid1 = nil
+    asteroid2 = nil
+    planet1 = nil
+    planet2 = nil
+
     -- screen setup
     love.graphics.setBackgroundColor(8, 8, 16 ) -- black space
     love.graphics.setMode(worldPhysics.pixelSize, worldPhysics.pixelSize, false, true, 0)
@@ -219,10 +253,16 @@ function love.draw()
         love.graphics.circle("fill", bullet.body:getX(), bullet.body:getY(), bullet.shape:getRadius())
     end
 
-    love.graphics.setColor(128, 255, 128) 
+    love.graphics.setColor(128, 255, 128) -- Green planets
     
     for i,planet in ipairs(objects.planets) do
         love.graphics.circle("fill", planet.body:getX(), planet.body:getY(), planet.shape:getRadius())
+    end
+
+    love.graphics.setColor(254, 216, 93) -- yellow asteroids
+
+    for i,asteroid in ipairs(objects.asteroids) do
+        love.graphics.polygon("fill", asteroid.body:getWorldPoints(asteroid.shape:getPoints()))
     end
 end
 
