@@ -1,8 +1,18 @@
 local message
 
+--To Remember: Category data
+--1: Player Ship
+--2: Bullet
+--3: 
+--4: 
+--5: 
+--6: Planet
+--
+
 function love.load()
     love.physics.setMeter(10) -- a meter is 10px
     world = love.physics.newWorld(0,  0, true) -- no gravity, things can sleep 
+    world:setCallbacks(beginContact) -- add gloval collision detection
 
     -- font
     font = love.graphics.newImageFont("resources/images/imagefont.png",
@@ -10,6 +20,7 @@ function love.load()
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ0" ..
         "123456789.,!?-+/():;%&`'*#=[]\""
         )
+    text = ""
     message = "blank"
     -- world objects set
     objects = {}
@@ -19,7 +30,8 @@ function love.load()
     objects.ship.body = love.physics.newBody(world, 650/2, 650/2, "dynamic") -- place a dynamic ship int he centre of the space
     objects.ship.shape = love.physics.newRectangleShape(5, 10) -- w = 20, h = 80
     objects.ship.fixture = love.physics.newFixture(objects.ship.body, objects.ship.shape, 1) -- density 1 attachment
-   
+    objects.ship.fixture:setCategory(1) 
+
     -- bullets
     freq = 1
     objects.bullets = {}
@@ -31,11 +43,13 @@ function love.load()
     planet1.body = love.physics.newBody(world,100,100, "static")
     planet1.shape = love.physics.newCircleShape(50)
     planet1.fixture = love.physics.newFixture(planet1.body, planet1.shape, 1)
+    planet1.fixture:setCategory(6)
 
     planet2 = {}
     planet2.body = love.physics.newBody(world, 400,200, "static")
     planet2.shape = love.physics.newCircleShape(50)
     planet2.fixture = love.physics.newFixture(planet2.body, planet2.shape, 1)
+    planet2.fixture:setCategory(6)
 
     table.insert(objects.planets, planet1)
     table.insert(objects.planets, planet2)
@@ -47,9 +61,17 @@ end
 
 function addBullet() -- shoot a bullet
     newBullet = {}
-    newBullet.body = love.physics.newBody(world, objects.ship.body:getX(), objects.ship.body:getY() - 5, "dynamic")
+    newBullet.body = love.physics.newBody(
+        world, 
+        objects.ship.body:getX() + math.sin(objects.ship.body:getAngle()) * 10, 
+        objects.ship.body:getY() - math.cos(objects.ship.body:getAngle()) * 10, 
+        "dynamic"
+    )
     newBullet.shape = love.physics.newCircleShape(2) -- radius = 2
     newBullet.fixture = love.physics.newFixture(newBullet.body, newBullet.shape, 1) -- density 1 attachment
+    -- set the category
+    newBullet.fixture:setCategory(2)
+
     newBullet.body:setBullet(true)
     newBullet.body:applyForce(
             math.sin(objects.ship.body:getAngle()) * 250, 
@@ -92,15 +114,25 @@ function love.update(dt)
     for i, bullet in ipairs(objects.bullets) do
         if bullet.body:getX() < 0 then
             table.remove(objects.bullets, i)
+            message = 'removed'..i
         elseif bullet.body:getY() < 0 then
             table.remove(objects.bullets, i)
+            message = 'removed'..i
         elseif bullet.body:getX() > 650 then
             table.remove(objects.bullets, i)
+            message = 'removed'..i
         elseif bullet.body:getY() > 650 then
             table.remove(objects.bullets, i)
+            message = 'removed'..i
         end
     end
-    
+    -- bullet removal
+    for b, bullet in ipairs(objects.bullets) do
+        if bullet.fixture:getUserData() == 'remove' then
+            table.remove(objects.bullets, b)
+            message = 'removed'..b
+        end
+    end
     -- planetary physics
     for p, planet in ipairs(objects,planets) do
         doGravity(planet, objects.ship)
@@ -150,8 +182,9 @@ function love.draw()
     love.graphics.print('Velocity:'..objects.ship.body:getAngularVelocity(), 10, 10)
     love.graphics.print('Angle:'..((180 * objects.ship.body:getAngle()) / math.pi), 10, 20)
     love.graphics.printf(message, 0, (650/2) - font:getHeight(), 650, "center")
-    
-    message = "" -- reset the message after display
+    love.graphics.printf(text, 0, (600/2) - font:getHeight(), 650, "center")
+   
+    text = ""
 
     love.graphics.setColor(193, 47, 14) -- red ship
     love.graphics.polygon("fill", objects.ship.body:getWorldPoints(objects.ship.shape:getPoints()))
@@ -168,3 +201,16 @@ function love.draw()
         love.graphics.circle("fill", planet.body:getX(), planet.body:getY(), planet.shape:getRadius())
     end
 end
+
+function beginContact(a, b, coll)
+    message = 'A:'..a:getCategory()..'\n'..'B:'..b:getCategory()..'\n'
+    
+    -- Bullet hits planet and is removed
+    if (a:getCategory() == 2 and b:getCategory() == 6) then
+        a:setUserData('remove')
+    -- Planet hits bullet and removes bullet (can this happen?)
+    elseif (a:getCategory() == 6 and b:getCategory() == 2) then
+        b:setUserData('remove')
+    end
+end
+
