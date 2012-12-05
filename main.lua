@@ -5,12 +5,30 @@ local message
 --2: Bullet
 --3: 
 --4: 
---5: 
+--5: Asteroid 
 --6: Planet
 --
 
+-- World Physics Area
+worldPhysics = {}
+worldPhysics.meter = 10 -- 1m is 10 px
+worldPhysics.pixelSize = 650 -- window is worldPhysics.pixelSizepx square
+
+-- Ship Physics Area
+shipPhysics = {}
+shipPhysics.angularDamping = 0.2 -- 0 to 1
+shipPhysics.maxAngularVelocity = 25 -- 0 to whatever
+shipPhysics.height = 1 * worldPhysics.meter -- 1m long
+shipPhysics.width = 0.5 * worldPhysics.meter -- 0.5m wide
+shipPhysics.force = 100 -- accelerate with 100 force
+
+-- Bullet Physics Area
+bulletPhysics = {}
+bulletPhysics.radius = 0.2 * worldPhysics.meter -- 20cm bullets
+bulletPhysics.force = 250 -- accelerate with 250 force
+
 function love.load()
-    love.physics.setMeter(10) -- a meter is 10px
+    love.physics.setMeter(worldPhysics.meter)
     world = love.physics.newWorld(0,  0, true) -- no gravity, things can sleep 
     world:setCallbacks(beginContact) -- add gloval collision detection
 
@@ -27,8 +45,11 @@ function love.load()
     
     -- ship
     objects.ship = {}
-    objects.ship.body = love.physics.newBody(world, 650/2, 650/2, "dynamic") -- place a dynamic ship int he centre of the space
-    objects.ship.shape = love.physics.newRectangleShape(5, 10) -- w = 20, h = 80
+    objects.ship.body = love.physics.newBody(world, worldPhysics.pixelSize/2, worldPhysics.pixelSize/2, "dynamic") -- place a dynamic ship int he centre of the space
+
+    objects.ship.body:setAngularDamping(shipPhysics.angularDamping)
+
+    objects.ship.shape = love.physics.newRectangleShape(shipPhysics.width, shipPhysics.height)
     objects.ship.fixture = love.physics.newFixture(objects.ship.body, objects.ship.shape, 1) -- density 1 attachment
     objects.ship.fixture:setCategory(1) 
 
@@ -47,7 +68,7 @@ function love.load()
 
     planet2 = {}
     planet2.body = love.physics.newBody(world, 400,200, "static")
-    planet2.shape = love.physics.newCircleShape(50)
+    planet2.shape = love.physics.newCircleShape(80)
     planet2.fixture = love.physics.newFixture(planet2.body, planet2.shape, 1)
     planet2.fixture:setCategory(6)
 
@@ -56,26 +77,26 @@ function love.load()
     
     -- screen setup
     love.graphics.setBackgroundColor(8, 8, 16 ) -- black space
-    love.graphics.setMode(650, 650, false, true, 0)
+    love.graphics.setMode(worldPhysics.pixelSize, worldPhysics.pixelSize, false, true, 0)
 end
 
 function addBullet() -- shoot a bullet
     newBullet = {}
     newBullet.body = love.physics.newBody(
         world, 
-        objects.ship.body:getX() + math.sin(objects.ship.body:getAngle()) * 10, 
-        objects.ship.body:getY() - math.cos(objects.ship.body:getAngle()) * 10, 
+        objects.ship.body:getX() + math.sin(objects.ship.body:getAngle()) * worldPhysics.meter, 
+        objects.ship.body:getY() - math.cos(objects.ship.body:getAngle()) * worldPhysics.meter, 
         "dynamic"
     )
-    newBullet.shape = love.physics.newCircleShape(2) -- radius = 2
+    newBullet.shape = love.physics.newCircleShape(bulletPhysics.radius) -- radius = 2
     newBullet.fixture = love.physics.newFixture(newBullet.body, newBullet.shape, 1) -- density 1 attachment
     -- set the category
     newBullet.fixture:setCategory(2)
 
     newBullet.body:setBullet(true)
     newBullet.body:applyForce(
-            math.sin(objects.ship.body:getAngle()) * 250, 
-            math.cos(objects.ship.body:getAngle()) * -250
+            math.sin(objects.ship.body:getAngle()) * bulletPhysics.force, 
+            math.cos(objects.ship.body:getAngle()) * -bulletPhysics.force
     )
     table.insert(objects.bullets, newBullet)
 end
@@ -85,7 +106,7 @@ function doGravity(planet, object) -- calculate the radial gravity for the plane
     -- distance, x1, y1, x2, y2 = love.physics.getDistance(planet.fixture, object.fixture) -- THIS CRASHES FOR SOME REASON
      local distance = math.sqrt( ( planet.body:getX() - object.body:getX() )^2 + (planet.body:getY() - object.body:getY()) ^2 ) -- calculate the mutual distance
      local angle = math.atan2(planet.body:getX() - object.body:getX(), planet.body:getY() - object.body:getY()) -- calculate the mutual angle
-     local newForce = force / (distance^2)
+     local newForce = force / (distance^2) -- I realise I sqrt and square this, but we can 'optimise' that later
      
      object.body:applyLinearImpulse( newForce * math.sin(angle), newForce * math.cos(angle) )
 end
@@ -99,16 +120,19 @@ function love.update(dt)
     if objects.ship.body:getY() < 0 then 
         objects.ship.body:setPosition(objects.ship.body:getX(), 0)
     end
-    if objects.ship.body:getX() > 650 then 
-        objects.ship.body:setPosition(650, objects.ship.body:getY())
+    if objects.ship.body:getX() > worldPhysics.pixelSize then 
+        objects.ship.body:setPosition(worldPhysics.pixelSize, objects.ship.body:getY())
     end
-    if objects.ship.body:getY() > 650 then 
-        objects.ship.body:setPosition(objects.ship.body:getX(), 650)
+    if objects.ship.body:getY() > worldPhysics.pixelSize then 
+        objects.ship.body:setPosition(objects.ship.body:getX(), worldPhysics.pixelSize)
     end
     if objects.ship.body:getAngle() > (2 * math.pi) then
         objects.ship.body:setAngle( objects.ship.body:getAngle() % ( 2* math.pi ) )
     elseif objects.ship.body:getAngle() < 0 then
         objects.ship.body:setAngle( objects.ship.body:getAngle() % ( 2* math.pi ) )
+    end
+    if objects.ship.body:getAngularVelocity() > shipPhysics.maxAngularVelocity then
+        objects.ship.body:setAngularVelocity(objects.ship.body:getAngularVelocity() % shipPhysics.maxAngularVelocity)
     end
     -- check bullet bounds
     for i, bullet in ipairs(objects.bullets) do
@@ -118,10 +142,10 @@ function love.update(dt)
         elseif bullet.body:getY() < 0 then
             table.remove(objects.bullets, i)
             message = 'removed'..i
-        elseif bullet.body:getX() > 650 then
+        elseif bullet.body:getX() > worldPhysics.pixelSize then
             table.remove(objects.bullets, i)
             message = 'removed'..i
-        elseif bullet.body:getY() > 650 then
+        elseif bullet.body:getY() > worldPhysics.pixelSize then
             table.remove(objects.bullets, i)
             message = 'removed'..i
         end
@@ -152,13 +176,13 @@ function love.update(dt)
         )
     elseif love.keyboard.isDown("up") then -- up arrow
         objects.ship.body:applyForce(
-            math.sin(objects.ship.body:getAngle()) * 100, 
-            math.cos(objects.ship.body:getAngle()) * -100
+            math.sin(objects.ship.body:getAngle()) *shipPhysics.force,  
+            math.cos(objects.ship.body:getAngle()) * -shipPhysics.force
         )
     elseif love.keyboard.isDown("down") then -- down arrow
         objects.ship.body:applyForce(
-            math.sin(objects.ship.body:getAngle()) * -100, 
-            math.cos(objects.ship.body:getAngle()) * 100
+            math.sin(objects.ship.body:getAngle()) * -shipPhysics.force, 
+            math.cos(objects.ship.body:getAngle()) * shipPhysics.force
         )
     elseif love.keyboard.isDown(" ") then -- space bar
         freq = freq + dt
@@ -168,7 +192,7 @@ function love.update(dt)
             freq = 0
         end
     elseif love.keyboard.isDown("r") then -- reset
-        objects.ship.body:setPosition(650/2, 650/2)
+        objects.ship.body:setPosition(worldPhysics.pixelSize/2, worldPhysics.pixelSize/2)
         objects.ship.body:setLinearVelocity(0, 0)
         objects.ship.body:setAngularVelocity(0)
         objects.ship.body:setAngle(0)
@@ -179,10 +203,10 @@ function love.draw()
     love.graphics.setFont(font)
     love.graphics.setColor(193, 193, 193) -- gray text
     
-    love.graphics.print('Velocity:'..objects.ship.body:getAngularVelocity(), 10, 10)
-    love.graphics.print('Angle:'..((180 * objects.ship.body:getAngle()) / math.pi), 10, 20)
-    love.graphics.printf(message, 0, (650/2) - font:getHeight(), 650, "center")
-    love.graphics.printf(text, 0, (600/2) - font:getHeight(), 650, "center")
+    love.graphics.print('Velocity:'..objects.ship.body:getAngularVelocity(), 10, 10) -- still not sure this is the right attribute to check
+    love.graphics.print('Angle:'..((180 * objects.ship.body:getAngle()) / math.pi), 10, 20) -- converted to degrees
+    love.graphics.printf(message, 0, (worldPhysics.pixelSize/2) - font:getHeight(), worldPhysics.pixelSize, "center")
+    love.graphics.printf(text, 0, (600/2) - font:getHeight(), worldPhysics.pixelSize, "center")
    
     text = ""
 
