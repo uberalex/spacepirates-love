@@ -188,14 +188,24 @@ function love.update(dt)
     for b, bullet in ipairs(objects.bullets) do
         if bullet.fixture:getUserData() == 'remove' then
             table.remove(objects.bullets, b)
-            message = 'removed'..b
+            message = 'removed bullet'..b
+        end
+    end
+    -- asteroid collision cleanup
+    for a,asteroid in ipairs(objects.asteroids) do
+        if asteroid.fixture:getUserData() == 'remove' then
+            table.remove(objects.asteroids, a)
+            message = 'remove asteroid'..a
         end
     end
     -- planetary physics
     for p, planet in ipairs(objects,planets) do
         doGravity(planet, objects.ship)
-        for i,bullet in ipairs(object.bullets) do
+        for i,bullet in ipairs(objects.bullets) do
             doGravity(planet, bullet)
+        end
+        for i, asteroid in ipairs(objects.asteroids) do
+            doGravity(planet, asteroid)
         end
     end
 
@@ -275,6 +285,17 @@ function beginContact(a, b, coll)
     -- Planet hits bullet and removes bullet (can this happen?)
     elseif (a:getCategory() == 6 and b:getCategory() == 2) then
         b:setUserData('remove')
+    -- Planet hits asteroid and removes asteroid
+    elseif (a:getCategory() == 5 and b:getCategory() == 6) then
+        a:setUserData('remove')
+    -- Bullet hits asteroid, both are removed
+    elseif(a:getCategory() == 2 and b:getCategory() == 5) then
+        b:setUserData('remove')
+        a:setUserData('remove')
+    -- Bullet hits asteroid, both are removed
+    elseif(b:getCategory() == 2 and a:getCategory() == 5) then
+        b:setUserData('remove')
+        a:setUserData('remove')
     end
 end
 
