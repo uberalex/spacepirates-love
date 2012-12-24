@@ -27,6 +27,7 @@ shipPhysics.width = 0.5 * worldPhysics.meter -- 0.5m wide
 shipPhysics.force = 100 -- accelerate with 100 force
 
 -- Bullet Physics Area
+freq = 1
 bulletPhysics = {}
 bulletPhysics.radius = 0.2 * worldPhysics.meter -- 20cm bullets
 bulletPhysics.force = 250 -- accelerate with 250 force
@@ -49,16 +50,26 @@ function love.load()
     
     -- ship
     objects.ship = {}
-    objects.ship.body = love.physics.newBody(world, worldPhysics.pixelSize/2, worldPhysics.pixelSize/2, "dynamic") -- place a dynamic ship int he centre of the space
+    objects.ship.body = love.physics.newBody(
+    										world, 
+    										worldPhysics.pixelSize/2, 
+    										worldPhysics.pixelSize/2, 
+    										"dynamic") -- place a dynamic ship int he centre of the space
 
     objects.ship.body:setAngularDamping(shipPhysics.angularDamping)
 
-    objects.ship.shape = love.physics.newRectangleShape(shipPhysics.width, shipPhysics.height)
-    objects.ship.fixture = love.physics.newFixture(objects.ship.body, objects.ship.shape, 1) -- density 1 attachment
+    objects.ship.shape = love.physics.newRectangleShape(
+    									shipPhysics.width, 
+    									shipPhysics.height)
+    
+    objects.ship.fixture = love.physics.newFixture(
+    									objects.ship.body, 
+    									objects.ship.shape, 
+    									1) -- density 1 attachment
+
     objects.ship.fixture:setCategory(1) 
 
     -- bullets
-    freq = 1
     objects.bullets = {}
 
     -- planets
@@ -84,11 +95,20 @@ function love.load()
     --TODO: generate this as a proper function that takes a centre point and makes random shapes, and places them in clear space
     asteroid1 = {}
     asteroid1.radius = 5
-    asteroid1.body = love.physics.newBody(world, asteroid1.centreX, asteroid1.centreY, "dynamic")
+    asteroid1.body = love.physics.newBody(
+    								world, 
+    								asteroid1.centreX, 
+    								asteroid1.centreY, 
+    								"dynamic")
+
     asteroid1.shape = love.physics.newPolygonShape(
         200,200,225,175,225,225
     )
-    asteroid1.fixture = love.physics.newFixture(asteroid1.body, asteroid1.shape, 1)
+    asteroid1.fixture = love.physics.newFixture(
+    										asteroid1.body, 
+    										asteroid1.shape, 
+    										1)
+
     asteroid1.fixture:setCategory(5)
 
     --TODO: generate this as a proper function that takes a centre point and makes random shapes, and places them in clear space
@@ -112,6 +132,9 @@ function love.load()
     -- screen setup
     love.graphics.setBackgroundColor(8, 8, 16 ) -- black space
     love.graphics.setMode(worldPhysics.pixelSize, worldPhysics.pixelSize, false, true, 0)
+
+    -- Keyboard
+    love.keyboard.setKeyRepeat(0.01, 1)
 end
 
 function addBullet() -- shoot a bullet
